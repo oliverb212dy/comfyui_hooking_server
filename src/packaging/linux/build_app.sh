@@ -24,6 +24,8 @@ git -C "$REPO_ROOT" archive --format=tar HEAD src config/.gitkeep data/.gitkeep 
 for drop in tests upstream_patches tools .github updater_dev GitUpdater.exe opencode.json customprompt/tag_collector; do
   rm -rf "$APP_DIR/src/$drop"
 done
+find "$APP_DIR" -type d -name __pycache__ -prune -exec rm -rf '{}' +
+find "$APP_DIR" -type f \( -name '*.pyc' -o -name '*.pyo' \) -delete
 
 cp "$REPO_ROOT/src/packaging/linux/launcher.sh" "$APP_DIR/SoyaComfy"
 cp "$REPO_ROOT/src/packaging/linux/setup.sh" "$APP_DIR/setup.sh"
@@ -36,6 +38,8 @@ chmod +x "$APP_DIR/SoyaComfy" "$APP_DIR/setup.sh" "$APP_DIR/src/run_en.sh"
 
 uv run --no-project --no-config --python 3.12 python \
   "$APP_DIR/update_payload.py" "$APP_DIR"
+find "$APP_DIR" -type d -name __pycache__ -prune -exec rm -rf '{}' +
+find "$APP_DIR" -type f \( -name '*.pyc' -o -name '*.pyo' \) -delete
 
 cat > "$APP_DIR/VERSION" <<EOF
 $VERSION
