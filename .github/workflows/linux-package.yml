@@ -1,0 +1,110 @@
+name: Linux package
+
+on:
+  push:
+    branches: ["**"]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build x86_64
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Derive version
+        id: version
+        run: |
+          if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
+            echo "value=${GITHUB_REF#refs/tags/v}" >> "$GITHUB_OUTPUT"
+          else
+            echo "value=0.0.0+${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Install pinned uv
+        run: |
+          export UV_INSTALL_DIR="$RUNNER_TEMP/soya-uv" UV_NO_MODIFY_PATH=1
+          curl -LsSf https://astral.sh/uv/0.11.8/install.sh | sh
+          echo "$UV_INSTALL_DIR" >> "$GITHUB_PATH"
+
+      - name: Build package
+        run: |
+          chmod +x src/packaging/linux/build_app.sh
+          src/packaging/linux/build_app.sh dist "${{ steps.version.outputs.value }}"
+
+      - name: Verify package
+        run: |
+          set -euo pipefail
+          test -x dist/SoyaComfy/SoyaComfy
+          test -x dist/SoyaComfy/setup.sh
+          test -x dist/SoyaComfy/src/run_en.sh
+          test -f dist/SoyaComfy/src/server.py
+          test -f dist/SoyaComfy/.soya-app-files.json
+          test -f dist/SoyaComfy/update_payload.py
+          for leaked in config.json key comfy logs models .git; do
+            if [ -e "dist/SoyaComfy/$leaked" ]; then
+              echo "페이로드에 들어가면 안 되는 것이 있습니다: $leaked"; exit 1
+            fi
+          done
+          bash -n dist/SoyaComfy/SoyaComfy
+          bash -n dist/SoyaComfy/setup.sh
+          bash -n dist/SoyaComfy/src/run_en.sh
+
+      - name: Archive
+        run: |
+          mkdir -p stage
+          cp -R dist/SoyaComfy stage/
+          tar -C stage -czf "SoyaComfy-${{ steps.version.outputs.value }}-linux-x86_64.tar.gz" SoyaComfy
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: SoyaComfy-linux-x86_64
+          path: SoyaComfy-*.tar.gz
+          if-no-files-found: error
+
+  release:
+    name: Attach to release
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: SoyaComfy-*
+          merge-multiple: true
+
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          cat > notes.md <<'NOTES'
+          ## Linux (x86_64)
+
+          압축을 푼 뒤 `먼저 읽어주세요.txt` 를 확인하고 실행해 주세요.
+
+          ```bash
+          tar -xzf SoyaComfy-*-linux-x86_64.tar.gz
+          cd SoyaComfy
+          chmod +x SoyaComfy
+          ./SoyaComfy
+          ```
+
+          최초 실행은 uv와 Python 환경을 설치하고 준비를 진행합니다.
+          브라우저 주소는 `http://127.0.0.1:8189/` 입니다.
+
+          사용자 데이터는 기본적으로 `~/.local/share/SoyaComfy` 에 저장됩니다.
+          NOTES
+          gh release create "$TAG" SoyaComfy-*-linux-x86_64.tar.gz \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "$TAG" \
+            --notes-file notes.md

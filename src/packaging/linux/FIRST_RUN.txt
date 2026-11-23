@@ -1,0 +1,25 @@
+SoyaComfy Linux 실행 안내
+
+1. 필요한 프로그램
+- Git
+- ffmpeg / ffprobe
+- 인터넷 연결
+
+Ubuntu/Debian 예:
+sudo apt update
+sudo apt install -y git ffmpeg
+
+2. 실행
+터미널에서 압축을 푼 폴더로 이동한 뒤 실행합니다.
+
+chmod +x SoyaComfy
+./SoyaComfy
+
+처음 실행하면 uv와 Python 3.12 환경을 설치하고 첫 실행 준비를 진행합니다.
+브라우저에서 http://127.0.0.1:8189/ 를 엽니다.
+
+사용자 데이터 위치:
+~/.local/share/SoyaComfy
+
+SOYA_DATA_ROOT 환경 변수로 위치를 바꿀 수 있습니다.
+ComfyUI 본체는 포함되어 있지 않습니다. 앱 설치 탭에서 별도로 설치합니다.
