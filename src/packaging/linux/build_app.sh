@@ -30,6 +30,8 @@ cp "$REPO_ROOT/src/packaging/linux/setup.sh" "$APP_DIR/setup.sh"
 cp "$REPO_ROOT/src/packaging/linux/FIRST_RUN.txt" "$APP_DIR/먼저 읽어주세요.txt"
 cp "$REPO_ROOT/src/packaging/macos/update_payload.py" "$APP_DIR/update_payload.py"
 cp "$REPO_ROOT/src/update_policy.py" "$APP_DIR/update_policy.py"
+cp "$REPO_ROOT/src/preset_locations.py" "$APP_DIR/preset_locations.py"
+cp "$REPO_ROOT/src/app_paths.py" "$APP_DIR/app_paths.py"
 chmod +x "$APP_DIR/SoyaComfy" "$APP_DIR/setup.sh" "$APP_DIR/src/run_en.sh"
 
 uv run --no-project --no-config --python 3.12 python \

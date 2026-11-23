@@ -48,6 +48,9 @@ jobs:
           test -f dist/SoyaComfy/src/server.py
           test -f dist/SoyaComfy/.soya-app-files.json
           test -f dist/SoyaComfy/update_payload.py
+          test -f dist/SoyaComfy/update_policy.py
+          test -f dist/SoyaComfy/preset_locations.py
+          test -f dist/SoyaComfy/app_paths.py
           for leaked in config.json key comfy logs models .git; do
             if [ -e "dist/SoyaComfy/$leaked" ]; then
               echo "페이로드에 들어가면 안 되는 것이 있습니다: $leaked"; exit 1
