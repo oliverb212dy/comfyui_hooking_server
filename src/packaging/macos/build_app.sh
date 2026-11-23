@@ -30,6 +30,8 @@ git -C "$REPO_ROOT" archive --format=tar HEAD src config/.gitkeep data/.gitkeep 
 for drop in tests upstream_patches tools .github updater_dev GitUpdater.exe opencode.json customprompt/tag_collector; do
     rm -rf "$APP/Contents/Resources/app/src/$drop"
 done
+find "$APP/Contents/Resources/app" -type d -name __pycache__ -prune -exec rm -rf '{}' +
+find "$APP/Contents/Resources/app" -type f \( -name '*.pyc' -o -name '*.pyo' \) -delete
 
 # Keep a complete inventory; updates compare shipped content with local edits.
 cp "$REPO_ROOT/src/packaging/macos/update_payload.py" "$APP/Contents/Resources/update_payload.py"
@@ -39,6 +41,8 @@ cp "$REPO_ROOT/src/app_paths.py" "$APP/Contents/Resources/app_paths.py"
 command -v uv >/dev/null || { echo "[BUILD] uv is required" >&2; exit 1; }
 uv run --no-project --no-config --python 3.12 python \
     "$APP/Contents/Resources/update_payload.py" "$APP/Contents/Resources/app"
+find "$APP/Contents/Resources/app" -type d -name __pycache__ -prune -exec rm -rf '{}' +
+find "$APP/Contents/Resources/app" -type f \( -name '*.pyc' -o -name '*.pyo' \) -delete
 
 # ── 실행기 ──────────────────────────────────────────────────────────────
 cp "$REPO_ROOT/src/packaging/macos/launcher.sh" "$APP/Contents/MacOS/$APP_NAME"
