@@ -25,11 +25,31 @@ def write_json(path: Path, value: dict) -> None:
     os.replace(temporary, path)
 
 
+def is_generated_artifact(name: str) -> bool:
+    path = PurePosixPath(name)
+    return "__pycache__" in path.parts or path.suffix in {".pyc", ".pyo"}
+
+
+def cleanup_generated(root: Path) -> None:
+    root = root.resolve()
+    for cache in sorted(root.rglob("__pycache__"), reverse=True):
+        if cache.is_dir() and not cache.is_symlink():
+            shutil.rmtree(cache)
+    for file in sorted(root.rglob("*"), reverse=True):
+        if file.is_file() and not file.is_symlink() and file.suffix in {".pyc", ".pyo"}:
+            file.unlink()
+
+
 def inventory(payload: Path) -> None:
+    payload = payload.resolve()
+    cleanup_generated(payload)
     files = {
         file.relative_to(payload).as_posix(): digest(file)
         for file in sorted(payload.rglob("*"))
-        if file.is_file() and file.name != INVENTORY and not is_user_data(file.relative_to(payload).as_posix())
+        if file.is_file()
+        and file.name != INVENTORY
+        and not is_user_data(file.relative_to(payload).as_posix())
+        and not is_generated_artifact(file.relative_to(payload).as_posix())
     }
     write_json(payload / INVENTORY, files)
 
@@ -54,11 +74,20 @@ def update(payload: Path, destination: Path) -> list[str]:
     payload = payload.resolve()
     destination = destination.resolve()
     destination.mkdir(parents=True, exist_ok=True)
+    cleanup_generated(destination)
     incoming = json.loads((payload / INVENTORY).read_text(encoding="utf-8"))
-    incoming = {name: digest for name, digest in incoming.items() if not is_user_data(name)}
+    incoming = {
+        name: digest
+        for name, digest in incoming.items()
+        if not is_user_data(name) and not is_generated_artifact(name)
+    }
     state = safe_target(destination, INVENTORY)
     previous = json.loads(state.read_text(encoding="utf-8")) if state.is_file() else {}
-    previous = {name: digest for name, digest in previous.items() if not is_user_data(name)}
+    previous = {
+        name: digest
+        for name, digest in previous.items()
+        if not is_user_data(name) and not is_generated_artifact(name)
+    }
     backup = destination / "data" / "backups" / "app_updates" / uuid.uuid4().hex
     conflicts = []
     for name in sorted(set(previous) | set(incoming)):
